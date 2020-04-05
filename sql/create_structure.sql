@@ -1,10 +1,10 @@
-CREATE TYPE "spatial_res" AS ENUM (
+CREATE TYPE "spatial_resolution" AS ENUM (
   'city',
   'province',
   'country'
 );
 
-CREATE TYPE "temporal_res" AS ENUM (
+CREATE TYPE "temporal_resolution" AS ENUM (
   'year',
   'month',
   'day'
@@ -51,7 +51,7 @@ CREATE TABLE "data" (
   "city_id" INT,
   "province_id" INT,
   "country_id" INT,
-  "spatial_resolution" spatial_res,
-  "temporal_resolution" temporal_res,
+  "spatial_resolution" spatial_resolution,
+  "temporal_resolution" temporal_resolution,
   "date" DATE
 );
