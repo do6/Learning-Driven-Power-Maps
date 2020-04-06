@@ -62,7 +62,7 @@ for line in lines:
     petroleum = splitted[6]
     gas = splitted[7]
     renewables = splitted[8]
-    electric_energy = splitted[9]
+    electric_energy = float(splitted[9])*0.277778 #convert terajoule to GWh
     district_heat = splitted[10]
     other = splitted[11]
 
@@ -70,7 +70,7 @@ for line in lines:
     # order: feature_id, value, country_id, province_id, spatial_resolution, temporal resolution, date
         sql += "\n(" + \
             str(dict_feature['net_electricity_demand']) + "," + \
-            electric_energy + "," + \
+            str(electric_energy) + "," + \
             str(dict_country['Germany']) + "," + \
             str(dict_province[province]) + "," + \
             "\'province\',\'year\'," + \
