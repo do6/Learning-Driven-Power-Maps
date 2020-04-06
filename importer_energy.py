@@ -2,17 +2,17 @@
 #%%
 import os
 
-filename = '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/LearningDrivenPowerMaps/data/energy_de_province_yearly.csv'
+filename = '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/data/energy_de_province_yearly.csv'
 save_as = 'energy_de_province_yearly.sql'
 #%% 
 csv = open(filename, 'r', encoding="utf-8")
 lines = csv.readlines() 
 number_of_headerlines = 5
 
-if not os.path.exists('/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/LearningDrivenPowerMaps/sql/import_energy.sql'):
-    f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/LearningDrivenPowerMaps/sql/import_energy.sql", "w")
+if not os.path.exists('/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql'):
+    f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql", "w")
 else:
-    f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/LearningDrivenPowerMaps/sql/import_energy.sql", "a")
+    f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql", "a")
 #%%
 dict_province = {
     'Baden-Wuerttemberg': 1,
@@ -43,7 +43,7 @@ dict_feature = {
 }
 #%%
 
-sql = "INSERT INTO data (feature_id, value, country_id, province_id, spatial_resolution, temporal_resolution, date)\nVALUES"
+sql = "INSERT INTO data (feature_id, value, province_id, spatial_resolution, temporal_resolution, date)\nVALUES"
 
 counter = 0
 for line in lines:
@@ -52,6 +52,7 @@ for line in lines:
         counter += 1
         continue
     
+    counter += 1
     splitted = line.split(";")
     province = splitted[0]
     year = splitted[1]
@@ -62,7 +63,9 @@ for line in lines:
     petroleum = splitted[6]
     gas = splitted[7]
     renewables = splitted[8]
-    electric_energy = float(splitted[9])*0.277778 #convert terajoule to GWh
+    electric_energy = splitted[9]
+    if electric_energy != "": #convert terajoule to GWh
+        electric_energy = float(electric_energy)/3.6 
     district_heat = splitted[10]
     other = splitted[11]
 
@@ -71,7 +74,6 @@ for line in lines:
         sql += "\n(" + \
             str(dict_feature['net_electricity_demand']) + "," + \
             str(electric_energy) + "," + \
-            str(dict_country['Germany']) + "," + \
             str(dict_province[province]) + "," + \
             "\'province\',\'year\'," + \
             "\'" + str(year) + "-12-31\'" + "),"
