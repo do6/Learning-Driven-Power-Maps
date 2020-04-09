@@ -1,10 +1,19 @@
 # import words to table
 #%%
 import os
+from sqlalchemy import create_engine, MetaData, Table
+import pandas as pd
 
-filename = '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/data/energy_de_province_yearly.csv'
-save_as = 'energy_de_province_yearly.sql'
+engine = create_engine("postgresql://dorowiemann@localhost:5432/power_maps")
+
+df_province = pd.read_sql_table("province", engine, columns=['name','id'])
+dict_province = df_province.set_index('name').to_dict('int') #syntax for retreiving data: dict_province['name']['id']
+
+df_feature = pd.read_sql_table("feature", engine, columns=['name','id'])
+dict_feature = df_feature.set_index('name').to_dict('int')
+
 #%% 
+filename = '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/data/energy_de_province_yearly.csv'
 csv = open(filename, 'r', encoding="utf-8")
 lines = csv.readlines() 
 number_of_headerlines = 5
@@ -12,35 +21,9 @@ number_of_headerlines = 5
 if not os.path.exists('/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql'):
     f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql", "w")
 else:
+    print("sql file already exists. Appending")
     f = open("/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/sql/import_energy.sql", "a")
-#%%
-dict_province = {
-    'Baden-Wuerttemberg': 1,
-    'Bayern': 2,
-    'Berlin': 3,
-    'Brandenburg': 4,
-    'Bremen': 5,
-    'Hamburg': 6,
-    'Hessen': 7,
-    'Mecklenburg-Vorpommern': 8,
-    'Niedersachsen': 9,
-    'Nordrhein-Westfalen': 10,
-    'Rheinland-Pfalz': 11,
-    'Saarland': 12,
-    'Sachsen': 13,
-    'Sachsen-Anhalt': 14,
-    'Schleswig-Holstein': 15,
-    'Thueringen': 16
-}
 
-dict_country = {
-    'China': 1,
-    'Germany': 2
-}
-
-dict_feature = {
-    'net_electricity_demand': 1
-}
 #%%
 
 sql = "INSERT INTO data (feature_id, value, province_id, spatial_resolution, temporal_resolution, date)\nVALUES"
@@ -72,9 +55,9 @@ for line in lines:
     if electric_energy != "":
     # order: feature_id, value, country_id, province_id, spatial_resolution, temporal resolution, date
         sql += "\n(" + \
-            str(dict_feature['net_electricity_demand']) + "," + \
+            str(dict_feature['net_electricity_demand']['id']) + "," + \
             str(electric_energy) + "," + \
-            str(dict_province[province]) + "," + \
+            str(dict_province[province]['id']) + "," + \
             "\'province\',\'year\'," + \
             "\'" + str(year) + "-12-31\'" + "),"
 
