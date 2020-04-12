@@ -4,23 +4,38 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
 from sklearn.linear_model import LinearRegression
 import sklearn.model_selection as model_selection
 from sklearn.metrics import mean_squared_error, r2_score
+from sqlalchemy import create_engine
 
-#from sqlalchemy import create_engine
+engine = create_engine("postgresql://dorowiemann@localhost:5432/power_maps")
 
-#engine = create_engine('postgresql://dorowiemann@5432/power_maps')
+df_feature = pd.read_sql_table("feature", engine, columns=['name','id'])
+dict_feature = df_feature.set_index('name').to_dict('int')
 
+population_id = dict_feature['population']['id']
+energy_id = dict_feature['net_electricity_demand']['id']
+
+sql = "SELECT x.value AS population_value, y.value AS energy_value, x.date, x.province_id, p.name AS province_name \
+FROM data AS x, data AS y, province AS p \
+WHERE x.date = y.date AND x.province_id = y.province_id AND x.province_id = p.id \
+    AND x.feature_id = " + str(population_id) + " \
+    AND y.feature_id = " + str(energy_id) + ";"
+
+df_data = pd.read_sql_query(sql, engine)
+
+
+#%% #### fertig bis hier
 
 # import test data
-data = pd.read_csv('/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/data/test/population_vs_demand.csv', \
-    delimiter=';')
+# data = pd.read_csv('/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/data/test/population_vs_demand.csv', \
+#     delimiter=';')
 
-x = np.array(data['population'])
+
+x = np.array(df_data['population_value'])
 x = x.reshape(-1, 1) # if one single feature
-y = data['energy_demand']
+y = df_data['energy_value']
 
 mse_list = []
 
@@ -42,35 +57,39 @@ for i in range(k):
 
     mse_list.append(mse)
 
-# print('Mean squared error: %.2f' %mse)
+print('Mean squared error: %.2f' %mse)
 
-
-### uncomment to make a single regression with all datapoints
-reg = LinearRegression().fit(x, y)
-y_pred = reg.predict(x)
 
 #%% plots
 ### uncomment blocks below for plots
 
-### uncomment only with single regression (not for cross validation)
+mean_error = [0]*len(mse_list)
+# take squareroot from mse values
+for i in range(len(mse_list)):
+    mean_error[i] = np.sqrt(mse_list[i])
+
+print('Mean Error: ', np.average(mse_list))
+
+### uncomment for cross validation histogram of mean error
+plt.hist(mean_error,bins=10)
+plt.title('Mean Error of Population vs. Energy Demand Regression in German States')
+plt.xlabel('Mean Error [GWh]')
+plt.ylabel('Amount out of 100-fold cross validation')
+plt.show()
+
+### uncomment for single regression (not for cross validation)
+reg = LinearRegression().fit(x, y)
+y_pred = reg.predict(x)
+
 plt.scatter(x,y)
 plt.plot(x, y_pred)
-plt.title('Population of Germany 1991 - 2018 vs. Energy Demand')
-plt.ylabel('Energy Demand [GWh]')
+plt.title('Population of German States 1991 - 2018 vs. Energy Demand')
+plt.ylabel('Net Electricity Demand [GWh]')
 plt.xlabel('Population')
 plt.show()
 
-### uncomment only with cross validation (not for single regression)
-# plt.hist(mse_list,bins=10)
-# plt.title('Mean Squared Error of Population vs. Energy Demand Regression')
-# plt.xlabel('MSE')
-# plt.ylabel('Non-normalized amount')
-# plt.show()
 
-# take squareroot from mse values
-for i in range(len(mse_list)):
-    mse_list[i] = np.sqrt(mse_list[i])
 
-print('Mean Error: ', np.average(mse_list))
+
 
 
