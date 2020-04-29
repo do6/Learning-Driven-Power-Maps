@@ -9,37 +9,35 @@ from sklearn.linear_model import LinearRegression
 import sklearn.model_selection as model_selection
 from sklearn.metrics import mean_squared_error, r2_score
 from sqlalchemy import create_engine
+from pm_helper import get_ids
+
+select_province = 'Sachsen'
+select_feature = 'gdp'
+select_feature_name = 'GDP'
+
+id_dict = get_ids() # usage: id = id_dict['country']['Croatia'] 
+
+#sql query 
+sql = "SELECT x.value AS " + select_feature + "_value, y.value AS energy_value, x.date, x.province_id, p.name AS province_name \
+FROM data AS x, data AS y, province AS p \
+WHERE x.date = y.date AND x.province_id = y.province_id AND x.province_id = p.id \
+    AND x.province_id = " + str(id_dict['province'][select_province]) + " \
+    AND x.feature_id = " + str(id_dict['feature'][select_feature]) + " \
+    AND y.feature_id = " + str(id_dict['feature']['net_electricity_demand']) + " \
+ORDER BY x.date;"
 
 engine = create_engine("postgresql://dorowiemann@localhost:5432/power_maps")
 
-#get IDs for feature and province from database
-df_feature = pd.read_sql_table("feature", engine, columns=['name','id'])
-dict_feature = df_feature.set_index('name').to_dict('int')
-population_id = dict_feature['population']['id']
-energy_id = dict_feature['net_electricity_demand']['id']
-
-df_province = pd.read_sql_table("province", engine, columns=['name','id'])
-dict_province = df_province.set_index('name').to_dict('int') #syntax for retreiving data: dict_province['name']['id']
-nrw_id = dict_province['Nordrhein-Westfalen']['id']
-bayern_id = dict_province['Bayern']['id']
-
-#sql query 
-sql = "SELECT x.value AS population_value, y.value AS energy_value, x.date, x.province_id, p.name AS province_name \
-FROM data AS x, data AS y, province AS p \
-WHERE x.date = y.date AND x.province_id = y.province_id AND x.province_id = p.id \
-    AND x.province_id = " + str(bayern_id) + " \
-    AND x.feature_id = " + str(population_id) + " \
-    AND y.feature_id = " + str(energy_id) + ";"
-
 df_data = pd.read_sql_query(sql, engine)
 
+# change format year-12-31 to year-01-01
 for i in range(len(df_data['date'])):
     new_date = datetime.date(df_data['date'][i].year,1,1)
     df_data['date'][i] = new_date
-    # date = date.replace('-12-31','')
 
 fig, ax1 = plt.subplots()
-
+plt.title(select_feature_name+' and Energy Demand of '+select_province, fontsize = 14)
+plt.grid()
 color = 'tab:red'
 ax1.set_xlabel('Year')
 ax1.set_ylabel('Net Electricity Demand [GWh]', color=color)
@@ -49,8 +47,8 @@ ax1.tick_params(axis='y', labelcolor=color)
 ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
 color = 'tab:blue'
-ax2.set_ylabel('Population', color=color)  # we already handled the x-label with ax1
-ax2.plot(df_data['date'], df_data['population_value'], color=color)
+ax2.set_ylabel(select_feature_name, color=color)  # we already handled the x-label with ax1
+ax2.plot(df_data['date'], df_data[select_feature+'_value'], color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()  # otherwise the right y-label is slightly clipped
