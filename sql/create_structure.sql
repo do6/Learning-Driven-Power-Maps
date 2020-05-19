@@ -59,3 +59,14 @@ CREATE TABLE "data" (
   "temporal_resolution" temporal_resolution,
   "date" DATE
 );
+
+CREATE TABLE "plant" (
+  "id" BIGSERIAL NOT NULL PRIMARY KEY,
+  "plant_number" VARCHAR(16),
+  "province_id" BIGINT REFERENCES province (id),
+  "zip" VARCHAR(5),
+  "type" VARCHAR(50),
+  "energy_carrier" VARCHAR(50),
+  "capacity" DOUBLE PRECISION,
+  "voltage_level" VARCHAR(50)
+);
