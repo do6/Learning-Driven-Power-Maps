@@ -27,6 +27,10 @@ def import_entsoe_datasets(filename, save_as_path, id_dict):
     country = ''
     date = []
     energy_daily = []
+    power_daily_maximum = 0
+    power_daily_minimum = 0
+    power_daily_max_list = []
+    power_daily_min_list = []
     counter = 0
     global_error_counter = 0
     local_error_counter = 0
@@ -59,6 +63,9 @@ def import_entsoe_datasets(filename, save_as_path, id_dict):
             try:
                 #power_line is the value that is used to caluclate energy and gets written to database
                 power_line = float(splitted[-1].replace('"','').replace('\n',''))
+                #extract the peak power for every day, later gets appended to array
+                if power_line > power_daily_maximum: power_daily_maximum = power_line
+                if power_line < power_daily_minimum or power_daily_minimum == 0: power_daily_minimum = power_line
                 #if the last data point/s were missing, take the average.
                 if missing_data_flag == True:
                     interpolation_counter += local_error_counter
@@ -88,8 +95,7 @@ def import_entsoe_datasets(filename, save_as_path, id_dict):
                 local_error_counter += 1
                 power_line = 0
                 missing_data_flag = True
-            # we have average power every 1/4 h in MW. Calculate energy in GWh.
-            #### adjust this value if timesteps are different (e.g. 1h)
+            # we have average power every time_diff (1/4h, 1/2h or 1h) in MW. Calculate energy in GWh.
             energy_line = power_line*time_diff/1000
             if counter == 2:
                 date = [date_line]
@@ -97,6 +103,7 @@ def import_entsoe_datasets(filename, save_as_path, id_dict):
             elif date_line == date[-1]:
                 energy_daily[-1] += energy_line
             else:
+                #append daily energy value
                 date.append(date_line)
                 energy_daily.append(energy_line)
 
@@ -136,6 +143,14 @@ def import_entsoe_datasets(filename, save_as_path, id_dict):
             + '\'country\'' + ', '\
             + '\'month\'' + ', '\
             + '\'' + date_monthly[i] +'\'),'
+        sql += '\n----END MONTHLY VALUES, START DAILY PEAKS----'
+        for i in range(len(power_daily_maximum)):
+            sql += '\n(' + str(id_dict['feature']['entsoe_power_peak']) + ', '\
+            + str(power_daily_maximum[i]) + ', '\
+            + str(id_dict['country'][country]) + ', '\
+            + '\'country\'' + ', '\
+            + '\'day\'' + ', '\
+            + '\'' + date_power_daily_max_list[i] +'\'),'
     except:
         print('country not valid')
         error_log = 'country not valid, please check file. ' + country
