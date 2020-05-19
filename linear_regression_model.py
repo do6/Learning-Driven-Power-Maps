@@ -71,18 +71,18 @@ for i in range(len(mse_list)):
 print('Mean Error: ', np.average(mse_list))
 
 ### uncomment for cross validation histogram of mean error
-plt.hist(mean_error,bins=10)
-plt.title('Mean Error of Population vs. Energy Demand Regression in German States')
-plt.xlabel('Mean Error [GWh]')
-plt.ylabel('Amount out of 100-fold cross validation')
-plt.show()
+# plt.hist(mean_error,bins=10)
+# plt.title('Mean Error of Population vs. Energy Demand Regression in German States')
+# plt.xlabel('Mean Error [GWh]')
+# plt.ylabel('Amount out of 100-fold cross validation')
+# plt.show()
 
 ### uncomment for single regression (not for cross validation)
-reg = LinearRegression().fit(x, y)
-y_pred = reg.predict(x)
+reg = LinearRegression().fit(x_train, y_train)
+y_pred = reg.predict(x_test)
 
 plt.scatter(x,y)
-plt.plot(x, y_pred)
+plt.plot(x_test, y_pred)
 plt.title('Population of German States 1991 - 2018 vs. Energy Demand')
 plt.ylabel('Net Electricity Demand [GWh]')
 plt.xlabel('Population')
