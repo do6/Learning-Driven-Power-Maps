@@ -1,6 +1,6 @@
 # Learning Driven Power Maps -- multi dimensional model
 
-#%%
+#%% import libraries
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,53 +8,36 @@ from sklearn.linear_model import LinearRegression
 import sklearn.model_selection as model_selection
 from sklearn.metrics import mean_squared_error, r2_score
 from sqlalchemy import create_engine
+import sys
+sys.path.insert(1, '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/import')
+from pm_helper import get_ids, get_data
 
-select_x = ['population_value','gdp_value']
-select_x_name = 'Population, GDP'
-
+#%% connect to database
+select_x = ['population','revenue_construction','revenue_manufacturing', 'tourism_guest_nights', 'area_agriculture']
 engine = create_engine("postgresql://dorowiemann@localhost:5432/power_maps")
 
-df_feature = pd.read_sql_table("feature", engine, columns=['name','id'])
-dict_feature = df_feature.set_index('name').to_dict('int')
+id_dict = get_ids() # usage: id_dict['country']['Croatia']
+data_df = get_data(select_x, id_dict) # returns a dataframe with features as in select_x (list) and features per capita. Energy per person in kWh
 
-energy_id = dict_feature['net_electricity_demand']['id']
-population_id = dict_feature['population']['id']
-population_density_id = dict_feature['population_density']['id']
-gdp_id = dict_feature['gdp']['id']
-gdp_per_capita_id = dict_feature['gdp_per_capita']['id']
-#%%
+# %% define model input
+model_input = []
+for i in range(len(select_x)):
+    if select_x[i] != 'population':    
+        model_input.append(select_x[i]+'_per_person')
 
-sql = "SELECT y.value AS energy_value, y.date, y.province_id, \
-x1.value AS population_value, \
-x2.value AS population_density_value, \
-x3.value AS gdp_value, \
-x4.value AS gdp_per_capita_value, \
-p.name AS province_name \
-FROM data AS y, province AS p, data AS x1, data AS x2, data AS x3, data AS x4 \
-WHERE y.date = x1.date AND y.province_id = x1.province_id AND y.province_id = p.id \
-AND y.date = x2.date AND y.province_id = x2.province_id \
-AND y.date = x3.date AND y.province_id = x3.province_id \
-AND y.date = x4.date AND y.province_id = x4.province_id \
-AND y.feature_id = " + str(energy_id) + " \
-AND x1.feature_id = " + str(population_id) + " \
-AND x2.feature_id = " + str(population_density_id) + " \
-AND x3.feature_id = " + str(gdp_id) + " \
-AND x4.feature_id = " + str(gdp_per_capita_id) + ";"
-    
-df_data = pd.read_sql_query(sql, engine)
+# model_input = ['revenue_construction_per_person']
 
-# %%
-x = df_data[select_x]
-y = df_data['energy_value']
-
-
+x = data_df[model_input]
+y = data_df['energy_per_person']
+#%% train model
 mse_list = []
-
 # k-fold cross-validation
 # --> k iterations
 # --> model_selection doku
+if len(x.columns) == 1:
+    x = np.array(x).reshape(-1, 1) # if one single feature
 
-k = 100
+k = 500
 for i in range(k):
     x_train, x_test, y_train, y_test = model_selection.train_test_split(x, y, train_size=0.9,test_size=0.1)
 
@@ -71,18 +54,38 @@ for i in range(k):
 
 print('\nMean MSE: ', np.average(mse_list))
 
-mean_error = [0]*len(mse_list)
-# take squareroot from mse values
-for i in range(len(mse_list)):
-    mean_error[i] = np.sqrt(mse_list[i])
+rmse_list = np.sqrt(mse_list)
 
-print('\nMean Error: ', np.average(mean_error))
 
-plt.hist(mean_error,bins=10)
-plt.title('Mean Error 2 dimensional Linear Regression\nFeatures: ' + select_x_name)
-plt.xlabel('Mean Error [GWh]')
-plt.ylabel('Amount out of '+str(k)+'-fold cross validation')
-plt.show()
+#%% plot!
+# mean_energy_demand = np.array(y).mean()
+# rmse_list = np.array(rmse_list)
+# mean_relative_error = 100*rmse_list/mean_energy_demand
+mu = rmse_list.mean()
+median = np.median(rmse_list)
+sigma = rmse_list.std()
+textstr = '\n'.join((
+    r'$\mu=%.2f$' % (mu, ),
+    r'$\mathrm{median}=%.2f$' % (median, ),
+    r'$\sigma=%.2f$' % (sigma, )))
+featurestr = 'Features: \n' + str(model_input).replace('[','').replace(']','').replace('\'','').replace(' ','\n')
+props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+
+if len(model_input) == 1:
+    plot_title = 'RMSE one-dimensional Linear Regression'
+else:
+    plot_title = 'RMSE multi dimensional Linear Regression'
+
+fig, ax = plt.subplots()
+ax.hist(rmse_list,bins=20)
+plt.title(plot_title)
+plt.xlabel('RMSE [kWh]')
+plt.ylabel('Total Amount')
+ax.text(0.03, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+        verticalalignment='top', bbox=props)
+fig.text(1.03, 0, featurestr, transform=ax.transAxes, fontsize=11,
+        verticalalignment='bottom', horizontalalignment='left', bbox=props)
+plt.tight_layout()
 
 # test
 # reg = LinearRegression().fit(x, y)
