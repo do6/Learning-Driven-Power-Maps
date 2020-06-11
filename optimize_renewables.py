@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import sys
 sys.path.insert(1, '/Users/dorowiemann/Documents/_Uni/_SJTU_PowerMaps/Learning-Driven-Power-Maps/import')
 from pm_helper import get_ids, get_data
@@ -62,8 +63,8 @@ for region in region_list:
         GROUP BY energy_carrier, region;'
     capa_total_dict[region] = pd.read_sql(sql_capa, engine)
     
-# %%
-# plants_dict['North']
+# %% display dict
+# plants_dict['South']
 capa_total_dict['South']
 # north_wind = 
 
@@ -135,7 +136,7 @@ for i in range(len(data_dict[region])):
     Es_list.append(Es)
 
 #%%
-def calc_energy(ks,kw,v_w,r_t):
+def calc_energy(kw,ks,v_w,r_t):
     # wind
     v_ci = 3.5
     v_wn = 14
@@ -170,21 +171,22 @@ def get_grad(vw,rs,Es,Ew,El):
     if vw < v_ci or vw >= v_co:
         grad_kw = 0
     elif v_ci <= vw and vw < v_wn:
-        grad_kw = -(vw-v_ci)/(v_wn-v_ci)*2*(El-(Es+Ew))
+        grad_kw = (-(vw-v_ci)/(v_wn-v_ci))*2*(El-(Es+Ew))
     elif v_wn <= vw and vw < v_co:
         grad_kw = -1*2*(El-(Es+Ew))
     else:
         print('v(t)=',v_t)
         sys.exit() 
-    grad_ks = -(rs/G0)*2*(El-(Es+Ew))
+    grad_ks = (-rs/G0)*2*(El-(Es+Ew))
 
     return grad_kw, grad_ks
     
 
 #%% gradient descent
-region = 'North'
-#Learning rate
-alpha = 0.1
+### set params
+region = 'South'
+alpha = 0.5
+iterations = 10000
 #Get initial capacity and convert MW to kW
 Kw0 = Kw0_dict[region] * 1000
 Ks0 = Ks0_dict[region] * 1000
@@ -201,7 +203,6 @@ kw_list = []
 ks_list = []
 grad_kw_list = []
 grad_ks_list = []
-iterations = 1000
 Ks = Ks0
 Kw = Kw0
 if len(Es_list) != len(Ew_list) or len(Es_list) != len(El_list):
@@ -237,16 +238,46 @@ for i in range(iterations):
     kw_list.append(Kw)
     ks_list.append(Ks)
     #update ks, kw:
-    Ks = Ks - alpha * grad_kw_sum
-    Kw = Kw - alpha * grad_ks_sum
+    Ks = Ks - alpha * grad_ks_sum
+    Kw = Kw - alpha * grad_kw_sum
+    if Ks <0:
+        Ks = 0
+    if Kw <0:
+        Kw = 0
+
+# convert capacity back to MW
+kw_list = np.array(kw_list)/1000 
+ks_list = np.array(ks_list)/1000
 
 #%% plot gradient descent results
 x_axis = np.linspace(1,iterations,iterations)
-plt.subplot(2,1,1)
-# plt.plot(x_axis, ks_list)
-# plt.plot(x_axis, abs_error_list)
-plt.plot(x_axis, ren_surplus_list)
+paramstr = 'Parameters: \nRegion: ' + region + '\nLearning Rate: ' + str(alpha) + '\nIterations: '+str(iterations)
+props = dict(boxstyle='round', facecolor='white', alpha=0.5)
 
+fig = plt.figure()
+ax1 = fig.add_subplot(3,1,1)
+plt.title('Cost Function')
+plt.ylabel('[kWh^2]')
+ax1.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
+ax1.plot(x_axis, cost_list)
+
+ax2 = fig.add_subplot(3,1,2)
+plt.title('Solar Power Capacity')
+plt.ylabel('Capacity [MW]')
+ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
+ax2.plot(x_axis, ks_list)
+
+ax3 = fig.add_subplot(3,1,3)
+plt.title('Wind Power Capacity')
+plt.ylabel('Capacity [MW]')
+plt.xlabel('Iterations')
+ax3.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
+ax3.plot(x_axis, kw_list)
+# plt.plot(x_axis, abs_error_list)
+# plt.plot(x_axis, ren_surplus_list)
+fig.text(1.03, 0.5, paramstr, fontsize=12,    verticalalignment='center', horizontalalignment='left', bbox=props) #, transform=ax3.transAxes
+plt.tight_layout()
+plt.show()
 # %% plot potential for given k_s, k_w
 # plt.subplot(2,1,1)
 # plt.plot(date_list, Es_list)
