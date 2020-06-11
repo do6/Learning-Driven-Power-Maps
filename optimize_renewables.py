@@ -185,7 +185,6 @@ def get_grad(vw,rs,Es,Ew,El):
     elif v_wn <= vw and vw < v_co:
         grad_kw = (-24*2)*(El-(Es+Ew))
     else:
-        #<3
         print('v(t)=',v_t)
         sys.exit()
     
@@ -277,7 +276,7 @@ def get_day_data(day, region = region):
     El = data_dict[region]['energy_demand'][day] # in GWh
 
     return vw, rs, El
-#<3
+
 
 
 def gd(Ks, Kw, iterations, alpha = 0.0000001, squared_error_list = [], region = region):
@@ -347,13 +346,13 @@ ax2.plot(x_axis, ks_list)
 ax3 = fig.add_subplot(3,1,3)
 plt.title('Wind Power Capacity')
 plt.ylabel('Capacity [GW]')
-plt.xlabel('Iterations')#<3
+plt.xlabel('Iterations')
 ax3.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
 ax3.plot(x_axis, kw_list)
 fig.text(1.03, 0.5, paramstr, fontsize=12,    verticalalignment='center', horizontalalignment='left', bbox=props) #, transform=ax3.transAxes
 plt.tight_layout()
 plt.show()
-print("<3")
+
 
 #%%plot cost function
 # x_axis = np.linspace(1,iterations,iterations)
